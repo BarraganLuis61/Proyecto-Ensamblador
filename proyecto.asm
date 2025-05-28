@@ -5,12 +5,6 @@ section .text
 %define FILAS 10
 %define COLUMNAS 12
 
-;int mover_jugador(char laberinto[FILAS][COLUMNAS],int x, int y, char letra)
-;Windows x64 calling convention:
-; RCX = laberinto
-; RDX = x
-; R8 = y
-; R9 = tecla
 mover_jugador:
     push rbp
     mov rbp, rsp
