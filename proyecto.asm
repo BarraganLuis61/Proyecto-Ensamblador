@@ -73,3 +73,16 @@ mover_jugador:
     or edx, esi     ; (y << 8) | x
     mov eax, edx
     jmp .fin
+
+.restaurar:
+    ; Restaurar posición original
+    mov eax, r9d    ; y original
+    shl eax, 8
+    or eax, r8d     ; x original
+    
+.fin:
+    pop rdi         ; Restaurar registros
+    pop rsi
+    pop rbx
+    pop rbp
+    ret
