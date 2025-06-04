@@ -1,88 +1,96 @@
 section .text
-  global mover_jugador
+    global mover_jugador     
 
-;Constantes
+; Constantes 
 %define FILAS 10
 %define COLUMNAS 12
 
 mover_jugador:
-    push rbp
-    mov rbp, rsp
-    push rbx        ; Preservar registros no volátiles
+    push rbp                 ; Guardamos el puntero base anterior
+    mov rbp, rsp             ; Establecemos un nuevo marco de pila
+    push rbx                 ; Guardamos registros no volátiles
     push rsi
     push rdi
-    
-    ; Extraer parámetros
-    mov rdi, rcx    ; rdi = laberinto
-    mov esi, edx    ; esi = x
-    mov edx, r8d    ; edx = y
-    movzx ecx, r9b  ; ecx = tecla (solo el byte bajo)
-    
-    ; Guardar posición original
-    mov r8d, esi    ; r8d = x original
-    mov r9d, edx    ; r9d = y original
-    
-    ; Convertir tecla a minúscula si es mayúscula
-    cmp cl, 'A'
-    jl .verificar_movimiento
-    cmp cl, 'Z'
-    jg .verificar_movimiento
-    add cl, 32      ; Convertir a minúscula
-    
+
+    ; Extraer parámetros que vienen en los registros:
+    mov rdi, rcx             ; rdi = puntero al laberinto
+    mov esi, edx             ; esi = posición X del jugador
+    mov edx, r8d             ; edx = posición Y del jugador
+    movzx ecx, r9b           ; ecx = tecla presionada (solo byte bajo, convertimos a 32 bits)
+
+    ; Guardamos posición original por si no se puede mover
+    mov r8d, esi             ; r8d = x original
+    mov r9d, edx             ; r9d = y original
+
+    ; Convertimos la tecla a minúscula si es mayúscula (para aceptar W o w, A o a, etc.)
+    cmp cl, 'A'              ; ¿Es menor que 'A'?
+    jl .verificar_movimiento ; Si es menor, saltamos (no es mayúscula)
+    cmp cl, 'Z'              ; ¿Es mayor que 'Z'?
+    jg .verificar_movimiento ; Si es mayor, saltamos (no es mayúscula)
+    add cl, 32               ; Convertimos a minúscula sumando 32 (ASCII)
+
 .verificar_movimiento:
-    ; Mover arriba (W)
+    ; Si la tecla fue 'w' (arriba)
     cmp cl, 'w'
-    jne .no_w
-    dec edx         ; y--
+    jne .no_w                ; Si no es 'w', saltamos
+    dec edx                  ; y-- (mover hacia arriba)
 .no_w:
-    ; Mover abajo (S)
+
+    ; Si la tecla fue 's' (abajo)
     cmp cl, 's'
     jne .no_s
-    inc edx         ; y++
+    inc edx                  ; y++ (mover hacia abajo)
 .no_s:
-    ; Mover izquierda (A)
+
+    ; Si la tecla fue 'a' (izquierda)
     cmp cl, 'a'
     jne .no_a
-    dec esi         ; x--
+    dec esi                  ; x-- (mover hacia la izquierda)
 .no_a:
-    ; Mover derecha (D)
+
+    ; Si la tecla fue 'd' (derecha)
     cmp cl, 'd'
     jne .no_d
-    inc esi         ; x++
+    inc esi                  ; x++ (mover hacia la derecha)
 .no_d:
-    
-    ; Verificar límites
+
+    ; Verificamos que el nuevo movimiento esté dentro de los límites del laberinto
     cmp esi, 0
-    jl .restaurar
+    jl .restaurar            ; Si x < 0, regresamos a la posición anterior
+
     cmp esi, COLUMNAS-1
-    jge .restaurar
+    jge .restaurar           ; Si x >= columnas, también restauramos
+
     cmp edx, 0
-    jl .restaurar
+    jl .restaurar            ; Si y < 0, también restauramos
+
     cmp edx, FILAS-1
-    jge .restaurar
-    
-    ; Verificar si es pared
-    mov eax, edx    ; y
-    imul eax, COLUMNAS ; y * COLUMNAS
-    add eax, esi    ; + x
-    cmp byte [rdi + rax], '#'
-    je .restaurar
-    
-    ; Movimiento válido - preparar retorno
-    shl edx, 8      ; y << 8
-    or edx, esi     ; (y << 8) | x
-    mov eax, edx
-    jmp .fin
+    jge .restaurar           ; Si y >= filas, también restauramos
+
+    ; Calculamos la posición [y][x] en el arreglo lineal del laberinto
+    mov eax, edx             ; eax = y
+    imul eax, COLUMNAS       ; eax = y * columnas (salto de fila)
+    add eax, esi             ; eax = (y * columnas) + x (posición final)
+    cmp byte [rdi + rax], '#' ; Verificamos si hay una pared en esa posición
+    je .restaurar            ; Si es pared, no nos movemos (saltamos a restaurar)
+
+    ; Movimiento válido: empaquetamos las coordenadas en un solo valor de retorno
+    shl edx, 8               ; y << 8 (y pasa a los 8 bits altos)
+    or edx, esi              ; combinamos y e x: (y << 8) | x
+    mov eax, edx             ; ponemos el resultado en eax (registro de retorno)
+    jmp .fin                 ; saltamos al final
 
 .restaurar:
-    ; Restaurar posición original
-    mov eax, r9d    ; y original
-    shl eax, 8
-    or eax, r8d     ; x original
-    
+    ; Si el movimiento fue inválido, restauramos la posición anterior
+    mov eax, r9d             ; eax = y original
+    shl eax, 8               ; y << 8
+    or eax, r8d              ; combinamos con x original
+
 .fin:
-    pop rdi         ; Restaurar registros
+    ; Restauramos los registros que usamos
+    pop rdi
     pop rsi
     pop rbx
     pop rbp
-    ret
+    ret                      ; Salimos de la función y devolvemos eax
+
